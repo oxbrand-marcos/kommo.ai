@@ -37,7 +37,7 @@ app.post('/webhook', (req, res) => {
     }
 
     processMessage({ text, chatId, leadId }).catch((err) =>
-      console.error('[processMessage] Erro:', err.message, err.response?.data)
+      console.error('[processMessage] Erro:', err.message, JSON.stringify(err.response?.data, null, 2))
     );
   } catch (err) {
     console.error('[webhook] Erro no handler:', err.message);
