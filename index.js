@@ -10,35 +10,34 @@ app.use(express.urlencoded({ extended: true }));
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
+const KOMMO_BOT_ID = process.env.KOMMO_BOT_ID || '33550';
+const KOMMO_FIELD_ID = process.env.KOMMO_FIELD_ID || '1085580';
+
 app.post('/webhook', (req, res) => {
-  // Responde imediatamente — evita timeout e 502
   res.sendStatus(200);
 
   try {
-    // Log do payload completo para debug
     console.log('[webhook] Body recebido:', JSON.stringify(req.body, null, 2));
 
     const body = req.body;
     const messages = body?.message?.add;
 
-    if (!messages || messages.length === 0) {
-      console.log('[webhook] Sem mensagens no payload, ignorando.');
-      return;
-    }
+    if (!messages || messages.length === 0) return;
 
     const msg = messages[0];
     const text = msg.text;
-    const conversationId = msg.chat_id; // Kommo envia chat_id, não conversation_id
+    const chatId = msg.chat_id;
+    const leadId = msg.element_id || msg.entity_id;
 
-    console.log(`[webhook] Mensagem: "${text}" | Conversa: ${conversationId}`);
+    console.log(`[webhook] Mensagem: "${text}" | Lead: ${leadId}`);
 
-    if (!text || !conversationId) {
-      console.log('[webhook] Texto ou chat_id ausente, ignorando.');
+    if (!text || !leadId) {
+      console.log('[webhook] Texto ou leadId ausente, ignorando.');
       return;
     }
 
-    processMessage({ text, conversationId }).catch((err) =>
-      console.error('[processMessage] Erro:', err.message)
+    processMessage({ text, chatId, leadId }).catch((err) =>
+      console.error('[processMessage] Erro:', err.message, err.response?.data)
     );
   } catch (err) {
     console.error('[webhook] Erro no handler:', err.message);
@@ -47,50 +46,73 @@ app.post('/webhook', (req, res) => {
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
-async function processMessage({ text, conversationId }) {
-  addToHistory(conversationId, { role: 'user', content: text });
+async function processMessage({ text, chatId, leadId }) {
+  // 1. Histórico por chatId
+  addToHistory(chatId, { role: 'user', content: text });
 
+  // 2. Chama o Claude
   const response = await anthropic.messages.create({
     model: 'claude-opus-4-8',
     max_tokens: 1024,
     system:
       process.env.AI_SYSTEM_PROMPT ||
       'Você é um assistente de vendas prestativo. Responda de forma clara, amigável e profissional.',
-    messages: getHistory(conversationId),
+    messages: getHistory(chatId),
   });
 
   const aiReply = response.content[0].text;
-  addToHistory(conversationId, { role: 'assistant', content: aiReply });
+  addToHistory(chatId, { role: 'assistant', content: aiReply });
 
-  console.log(`[${conversationId}] Resposta da IA: "${aiReply}"`);
+  console.log(`[claude] Resposta: "${aiReply.substring(0, 80)}..."`);
 
-  await sendKommoMessage(conversationId, aiReply);
-  console.log(`[${conversationId}] ✓ Enviado ao Kommo`);
+  // 3. Salva a resposta no campo customizado do lead
+  await updateLeadField(leadId, aiReply);
+
+  // 4. Dispara o Salesbot para enviar a mensagem pelo WhatsApp
+  await runSalesbot(leadId);
+
+  console.log(`[lead:${leadId}] ✓ Campo atualizado e Salesbot disparado`);
 }
 
-async function sendKommoMessage(conversationId, text) {
-  const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/chats/messages`;
+async function updateLeadField(leadId, value) {
+  const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/leads/${leadId}`;
 
-  try {
-    const response = await axios.post(
-      url,
-      {
-        chat_id: conversationId,
-        text,
-        type: 'text',
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${process.env.KOMMO_ACCESS_TOKEN}`,
-          'Content-Type': 'application/json',
+  await axios.patch(
+    url,
+    {
+      custom_fields_values: [
+        {
+          field_id: parseInt(KOMMO_FIELD_ID),
+          values: [{ value }],
         },
-      }
-    );
-    console.log('[kommo] Resposta da API:', response.status, JSON.stringify(response.data));
-  } catch (err) {
-    console.error('[kommo] Erro ao enviar:', err.response?.status, JSON.stringify(err.response?.data));
-    throw err;
-  }
+      ],
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.KOMMO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  console.log(`[kommo] Campo ${KOMMO_FIELD_ID} atualizado no lead ${leadId}`);
+}
+
+async function runSalesbot(leadId) {
+  const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/bots/${KOMMO_BOT_ID}/run`;
+
+  const response = await axios.post(
+    url,
+    { entity_id: parseInt(leadId), entity_type: 'leads' },
+    {
+      headers: {
+        Authorization: `Bearer ${process.env.KOMMO_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  console.log(`[kommo] Salesbot ${KOMMO_BOT_ID} disparado:`, response.status);
 }
 
 const PORT = process.env.PORT || 3000;
