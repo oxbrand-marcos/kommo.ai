@@ -28,12 +28,12 @@ app.post('/webhook', (req, res) => {
 
     const msg = messages[0];
     const text = msg.text;
-    const conversationId = msg.conversation_id;
+    const conversationId = msg.chat_id; // Kommo envia chat_id, não conversation_id
 
     console.log(`[webhook] Mensagem: "${text}" | Conversa: ${conversationId}`);
 
     if (!text || !conversationId) {
-      console.log('[webhook] Texto ou conversation_id ausente, ignorando.');
+      console.log('[webhook] Texto ou chat_id ausente, ignorando.');
       return;
     }
 
