@@ -69,20 +69,26 @@ async function processMessage({ text, conversationId }) {
 }
 
 async function sendKommoMessage(conversationId, text) {
-  const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/chats/messages`;
+  // Endpoint correto para enviar mensagem em um chat existente
+  const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/chats/${conversationId}/messages`;
 
-  const response = await axios.post(
-    url,
-    { conversation_id: conversationId, message: { type: 'text', text } },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.KOMMO_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  console.log('[kommo] Resposta da API:', response.status, JSON.stringify(response.data));
+  try {
+    const response = await axios.post(
+      url,
+      { text },
+      {
+        headers: {
+          Authorization: `Bearer ${process.env.KOMMO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    );
+    console.log('[kommo] Resposta da API:', response.status, JSON.stringify(response.data));
+  } catch (err) {
+    // Loga detalhes do erro para facilitar debug
+    console.error('[kommo] Erro ao enviar:', err.response?.status, JSON.stringify(err.response?.data));
+    throw err;
+  }
 }
 
 const PORT = process.env.PORT || 3000;
