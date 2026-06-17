@@ -37,7 +37,7 @@ app.post('/webhook', (req, res) => {
     }
 
     processMessage({ text, chatId, leadId }).catch((err) =>
-      console.error('[processMessage] Erro:', err.message, JSON.stringify(err.response?.data, null, 2))
+      console.error('[processMessage] Erro:', err.message, err.response?.data)
     );
   } catch (err) {
     console.error('[webhook] Erro no handler:', err.message);
@@ -77,13 +77,16 @@ async function processMessage({ text, chatId, leadId }) {
 async function updateLeadField(leadId, value) {
   const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/leads/${leadId}`;
 
+  // Campo de texto do Kommo tem limite de 256 caracteres
+  const truncated = value.length > 256 ? value.substring(0, 253) + '...' : value;
+
   await axios.patch(
     url,
     {
       custom_fields_values: [
         {
           field_id: parseInt(KOMMO_FIELD_ID),
-          values: [{ value }],
+          values: [{ value: truncated }],
         },
       ],
     },
