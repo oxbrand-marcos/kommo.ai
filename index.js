@@ -65,7 +65,7 @@ async function processMessage({ text, chatId, leadId }) {
     'Você é um assistente de vendas prestativo. Responda de forma clara, amigável e profissional.';
 
   const systemPrompt = dadosPlanilha
-    ? `${basePrompt}\n\nDADOS DE PRODUTOS E PREÇOS (use para responder perguntas sobre telhas):\n\\\\n${dadosPlanilha}\n\\\``
+    ? `${basePrompt}\n\nDADOS DE PRODUTOS E PREÇOS (use para responder perguntas sobre telhas):\n\`\`\`\n${dadosPlanilha}\n\`\`\``
     : basePrompt;
 
   // 4. Chama o Claude
@@ -94,8 +94,8 @@ async function processMessage({ text, chatId, leadId }) {
 async function updateLeadField(leadId, value) {
   const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/leads/${leadId}`;
 
-  // Campo de texto do Kommo tem limite de 256 caracteres
-  const truncated = value.length > 2560 ? value.substring(0, 253) + '...' : value;
+  // Campo "Área de texto" do Kommo suporta até ~5000 caracteres
+  const truncated = value.length > 5000 ? value.substring(0, 4997) + '...' : value;
 
   await axios.patch(
     url,
@@ -136,7 +136,7 @@ async function runSalesbot(leadId) {
 }
 
 async function fetchPlanilha() {
-  const url = 'https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vQokBDjy83TiV9scuArDL9r9GmJGwlmaH4qAI1zS2PnURoApR0whct_w73vKQny4Q7VqBssrXLoBAkD/pubhtml?pli=1';
+  const url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQokBDjy83TiV9scuArDL9r9GmJGwlmaH4qAI1zS2PnURoApR0whct_w73vKQny4Q7VqBssrXLoBAkD/pub?output=csv';
   const resp = await axios.get(url, { timeout: 5000 });
   console.log('[planilha] Primeiras linhas:', resp.data.substring(0, 300));
   return resp.data;
