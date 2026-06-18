@@ -95,7 +95,7 @@ async function updateLeadField(leadId, value) {
   const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/leads/${leadId}`;
 
   // Campo de texto do Kommo tem limite de 256 caracteres
-  const truncated = value.length > 256 ? value.substring(0, 253) + '...' : value;
+  const truncated = value.length > 2560 ? value.substring(0, 253) + '...' : value;
 
   await axios.patch(
     url,
