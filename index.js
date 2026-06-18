@@ -138,6 +138,7 @@ async function runSalesbot(leadId) {
 async function fetchPlanilha() {
   const url = 'https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vQokBDjy83TiV9scuArDL9r9GmJGwlmaH4qAI1zS2PnURoApR0whct_w73vKQny4Q7VqBssrXLoBAkD/pubhtml?pli=1';
   const resp = await axios.get(url, { timeout: 5000 });
+  console.log('[planilha] Primeiras linhas:', resp.data.substring(0, 300));
   return resp.data;
 }
 
