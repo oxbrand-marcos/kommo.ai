@@ -11,7 +11,7 @@ app.use(express.urlencoded({ extended: true }));
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const KOMMO_BOT_ID = process.env.KOMMO_BOT_ID || '33550';
-const KOMMO_FIELD_ID = process.env.KOMMO_FIELD_ID || '1002842';
+const KOMMO_FIELD_ID = process.env.KOMMO_FIELD_ID || '1107570';
 
 app.post('/webhook', (req, res) => {
   res.sendStatus(200);
