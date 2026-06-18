@@ -42,7 +42,7 @@ app.post('/webhook', (req, res) => {
   } catch (err) {
     console.error('[webhook] Erro no handler:', err.message);
   }
-});
+}); 
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));
 
@@ -50,13 +50,29 @@ async function processMessage({ text, chatId, leadId }) {
   // 1. Histórico por chatId
   addToHistory(chatId, { role: 'user', content: text });
 
-  // 2. Chama o Claude
+  // 2. Busca planilha de preços
+  let dadosPlanilha = '';
+  try {
+    dadosPlanilha = await fetchPlanilha();
+    console.log('[planilha] Dados carregados com sucesso');
+  } catch (err) {
+    console.warn('[planilha] Falha ao carregar planilha:', err.message);
+  }
+
+  // 3. Monta system prompt com dados da planilha
+  const basePrompt =
+    process.env.AI_SYSTEM_PROMPT ||
+    'Você é um assistente de vendas prestativo. Responda de forma clara, amigável e profissional.';
+
+  const systemPrompt = dadosPlanilha
+    ? `${basePrompt}\n\nDADOS DE PRODUTOS E PREÇOS (use para responder perguntas sobre telhas):\n\\\\n${dadosPlanilha}\n\\\``
+    : basePrompt;
+
+  // 4. Chama o Claude
   const response = await anthropic.messages.create({
     model: 'claude-opus-4-8',
     max_tokens: 1024,
-    system:
-      process.env.AI_SYSTEM_PROMPT ||
-      'Você é um assistente de vendas prestativo. Responda de forma clara, amigável e profissional.',
+    system: systemPrompt,
     messages: getHistory(chatId),
   });
 
@@ -65,14 +81,15 @@ async function processMessage({ text, chatId, leadId }) {
 
   console.log(`[claude] Resposta: "${aiReply.substring(0, 80)}..."`);
 
-  // 3. Salva a resposta no campo customizado do lead
+  // 5. Salva a resposta no campo customizado do lead
   await updateLeadField(leadId, aiReply);
 
-  // 4. Dispara o Salesbot para enviar a mensagem pelo WhatsApp
+  // 6. Dispara o Salesbot para enviar a mensagem pelo WhatsApp
   await runSalesbot(leadId);
 
   console.log(`[lead:${leadId}] ✓ Campo atualizado e Salesbot disparado`);
 }
+
 
 async function updateLeadField(leadId, value) {
   const url = `https://${process.env.KOMMO_SUBDOMAIN}.kommo.com/api/v4/leads/${leadId}`;
@@ -116,6 +133,12 @@ async function runSalesbot(leadId) {
   );
 
   console.log(`[kommo] Salesbot ${KOMMO_BOT_ID} disparado:`, response.status);
+}
+
+async function fetchPlanilha() {
+  const url = 'https://docs.google.com/spreadsheets/d/1Dsh5yKbwHgT0gQMXQyNi33aAcEthZD4yPa7o10kStM8/export?format=csv';
+  const resp = await axios.get(url, { timeout: 5000 });
+  return resp.data;
 }
 
 const PORT = process.env.PORT || 3000;
