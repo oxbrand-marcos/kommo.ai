@@ -136,7 +136,7 @@ async function runSalesbot(leadId) {
 }
 
 async function fetchPlanilha() {
-  const url = 'https://docs.google.com/spreadsheets/d/1Dsh5yKbwHgT0gQMXQyNi33aAcEthZD4yPa7o10kStM8/export?format=csv';
+  const url = 'https://docs.google.com/spreadsheets/u/1/d/e/2PACX-1vQokBDjy83TiV9scuArDL9r9GmJGwlmaH4qAI1zS2PnURoApR0whct_w73vKQny4Q7VqBssrXLoBAkD/pubhtml?pli=1';
   const resp = await axios.get(url, { timeout: 5000 });
   return resp.data;
 }
