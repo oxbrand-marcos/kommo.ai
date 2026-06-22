@@ -16,9 +16,9 @@ import { JwtAuthGuard } from './guards/jwt.guard';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.get<string>('API_KEY_HMAC_SECRET'), // ou o nome da sua variável
-        signOptions: { 
-          expiresIn: config.get<string>('JWT_EXPIRES_IN', '1d') as any 
+        secret: config.get<string>('JWT_SECRET'), // ← corrigido
+        signOptions: {
+          expiresIn: config.get<string>('JWT_EXPIRES_IN') as any,
         },
       }),
     }),

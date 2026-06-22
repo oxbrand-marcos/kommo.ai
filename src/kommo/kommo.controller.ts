@@ -1,10 +1,10 @@
 import { Body, Controller, HttpCode, HttpStatus, Logger, Post, Req, UseGuards } from '@nestjs/common';
-import { KommoWebhookDto } from '../auth/dto/kommo-webhook.dto';
-import { KommoService } from './kommo.service';
+import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { ClaudeService } from '../claude/claude.service';
 import { ConversationService } from '../conversation/conversation.service';
 import { DocumentService } from '../document/document.service';
-import { ApiKeyGuard } from '../auth/guards/api-key.guard';
+import { KommoWebhookDto } from './dto/kommo-webhook.dto';
+import { KommoService } from './kommo.service';
 
 @Controller('kommo')
 export class KommoController {

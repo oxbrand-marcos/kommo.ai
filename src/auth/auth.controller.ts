@@ -1,7 +1,7 @@
 import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { LoginDto } from '../kommo/dto/login.dto';
+import { RefreshDto } from '../kommo/dto/refresh.dto';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
-import { RefreshDto } from './dto/refresh.dto';
 import { JwtAuthGuard } from './guards/jwt.guard';
 
 @Controller('auth')
